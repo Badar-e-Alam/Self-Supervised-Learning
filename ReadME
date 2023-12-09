@@ -1,24 +1,24 @@
 # Research Project - Vision Domain
 
-This repository is part of a research project in the vision domain. The project begins with training the Barlow Twins algorithm on a custom dataset. The pipeline also includes hyperparameter optimization through Optuna.
-
-Following this, the Barlow Twins algorithm will be used as a feature extractor and fine-tuned for the classification task.
+Welcome to our research project in the vision domain! This repository focuses on training the Barlow Twins algorithm on a custom dataset and involves an Optuna-based hyperparameter optimization pipeline. Additionally, the Barlow Twins algorithm will be leveraged as a feature extractor and fine-tuned for a classification task.
 
 ## Dependencies
 
-This project requires the following dependencies:
+Ensure you have the following dependencies installed before running the project:
 
-- PyTorch
-- Optuna
-- FFCV
-- Lightly
+- [PyTorch](https://pytorch.org/)
+- [Optuna](https://optuna.org/)
+- [FFCV](#) *(Please provide the correct link)*
+- [Lightly](#) *(Please provide the correct link)*
 
 ## To-Do
-- Work with the FFCV dataloader to speed up the overall training process.
+- Integrate the FFCV dataloader to enhance the training process efficiency.
 
 ## Getting Started
 
-To get started with this project, clone the repository and install the necessary dependencies.
+To kickstart your exploration of this project, follow these steps:
 
-```bash
-pip install torch optuna ffcv lightly
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/your-username/your-repository.git
