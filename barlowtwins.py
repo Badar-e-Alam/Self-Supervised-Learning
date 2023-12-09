@@ -16,6 +16,7 @@ from lightly.transforms.byol_transform import (
     BYOLView1Transform,
     BYOLView2Transform,
 )
+
 # import ffcv
 # import ffcv.fields.decoders as decoders
 # from ffcv.fields import RGBImageField, IntField
@@ -28,6 +29,8 @@ from PIL import Image
 import os
 from custom_data import Image_dataset
 import json
+
+
 # from ffcv.writer import DatasetWriter
 # from ffcv.fields import RGBImageField, IntField
 # from torch.utils.data import Dataset, DataLoader
@@ -132,13 +135,17 @@ transform = BYOLTransform(
 # # )
 # #or create a dataset from a folder containing images or videos:
 # #dataset = LightlyDataset("/scratch/mrv1005h/data/", transform=transform)
-Customedata=Image_dataset(main_dir='/scratch/mrvl005h/data')
+Customedata = Image_dataset(main_dir="/scratch/mrvl005h/data")
+
+
 def objective(trial):
-    batch_size = trial.suggest_categorical("batch_size", [32, 64, 128,256])
-    learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-1)
-    step_size=trial.suggest_categorical("step_size",[10,20,30,40,50])
+    batch_size = trial.suggest_categorical("batch_size", [32, 64, 128, 256])
+    learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-1)
+    step_size = trial.suggest_categorical("step_size", [10, 20, 30, 40, 50])
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=step_size, gamma=0.1
+    )
     train_data_loader = torch.utils.data.DataLoader(
         Customedata,
         batch_size=batch_size,
@@ -146,15 +153,14 @@ def objective(trial):
         drop_last=True,
         num_workers=4,
     )
-   
-# test_data_loader = torch.utils.data.DataLoader(
-#     test_data,
-#     batch_size=50,
-#     shuffle=True,
-#     drop_last=True,
-#     num_workers=0,
-# )
 
+    # test_data_loader = torch.utils.data.DataLoader(
+    #     test_data,
+    #     batch_size=50,
+    #     shuffle=True,
+    #     drop_last=True,
+    #     num_workers=0,
+    # )
 
     criterion = BarlowTwinsLoss()
     print("Starting Training")
@@ -162,37 +168,36 @@ def objective(trial):
     # for epoch in tqdm.tqdm(range(100)):
     total_loss = 0.0
     #     print(f"epoch: {epoch:>02}")
-    for index,batch in tqdm.tqdm(enumerate(train_data_loader)):
-            x0, x1 = batch
-            x0 = x0.to(device)
-            x1 = x1.to(device)
-            z0 = model(x0)
-            z1 = model(x1)
-            loss = criterion(z0, z1)
-            total_loss += loss.detach()
+    for index, batch in tqdm.tqdm(enumerate(train_data_loader)):
+        x0, x1 = batch
+        x0 = x0.to(device)
+        x1 = x1.to(device)
+        z0 = model(x0)
+        z1 = model(x1)
+        loss = criterion(z0, z1)
+        total_loss += loss.detach()
 
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-            scheduler.step()
-            #if index % 100 == 0:
-                #iter_num = index + 1
-                #writer.add_scalar("Loss/train", round(loss.item(), 2), iter_num)
-                # img_grid = make_grid(x0)
-                # writer.add_image('Input Images/x0', img_grid, iter_num)
-                # img_grid = make_grid(x1)
-                # writer.add_image('Input Images/x1', img_grid, iter_num)
-                # writer.add_histogram('Model outputs/z0', z0, iter_num)
-                # writer.add_histogram('Model outputs/z1', z1, iter_num)
-
-
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        scheduler.step()
+        # if index % 100 == 0:
+        # iter_num = index + 1
+        # writer.add_scalar("Loss/train", round(loss.item(), 2), iter_num)
+        # img_grid = make_grid(x0)
+        # writer.add_image('Input Images/x0', img_grid, iter_num)
+        # img_grid = make_grid(x1)
+        # writer.add_image('Input Images/x1', img_grid, iter_num)
+        # writer.add_histogram('Model outputs/z0', z0, iter_num)
+        # writer.add_histogram('Model outputs/z1', z1, iter_num)
 
     avg_loss = total_loss / len(train_data_loader)
 
     torch.save(model.backbone.state_dict(), f"runs/barlowtwins/model_{0}.pt")
     return avg_loss.item()
 
-study = optuna.create_study(direction='maximize')
+
+study = optuna.create_study(direction="maximize")
 study.optimize(objective, n_trials=100)
 
 
@@ -201,34 +206,33 @@ study.optimize(objective, n_trials=100)
 # Save the best trial values to a JSON file
 
 # Print the optimization results
-print('Number of finished trials:', len(study.trials))
+print("Number of finished trials:", len(study.trials))
 
 best_trials = []
 trials_df = study.trials_dataframe()
 
 # Convert the DataFrame to a JSON string
-json_string = trials_df.to_json(orient='records', lines=True)
+json_string = trials_df.to_json(orient="records", lines=True)
 
 # Specify the file path where you want to save the JSON file
-json_file_path = 'optuna_results.json'
+json_file_path = "optuna_results.json"
 
 # Write the JSON string to the file
-with open(json_file_path, 'w') as json_file:
+with open(json_file_path, "w") as json_file:
     json_file.write(json_string)
 
 
 for trial in study.trials:
-    best_trial_values = {
-        'value': trial.value,
-        'params': trial.params
-    }
+    best_trial_values = {"value": trial.value, "params": trial.params}
     best_trials.append(best_trial_values)
 
-with open('optuna_logging.json', 'w') as file:
+with open("optuna_logging.json", "w") as file:
     json.dump(best_trials, file)
 
-print(f"optuna logging file saved to {file.name} and optuna results file saved to {json_file_path}")
-print('  Value: ', trial.value)
-print('  Params: ')
+print(
+    f"optuna logging file saved to {file.name} and optuna results file saved to {json_file_path}"
+)
+print("  Value: ", trial.value)
+print("  Params: ")
 for key, value in trial.params.items():
-    print(f'    {key}: {value}')
+    print(f"    {key}: {value}")

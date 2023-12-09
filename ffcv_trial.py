@@ -1,7 +1,6 @@
-
 import os
 from torch.utils.data import Dataset
-from PIL import Image,ImageFile
+from PIL import Image, ImageFile
 import ffcv
 from torchvision.transforms import ToTensor
 
@@ -20,20 +19,20 @@ class Image_dataset(Dataset):
         ImageFile.LOAD_TRUNCATED_IMAGES = True
 
         img_loc1 = os.path.join(self.main_dir, self.all_imgs[idx])
-        image1 = Image.open(img_loc1).resize((224,224))
+        image1 = Image.open(img_loc1).resize((224, 224))
         tensor_image1 = self.transform(image1)
         return tensor_image1
 
-    
 
 # Define the transform to normalize the data
 
 # Create the dataset
 
-dataset = Image_dataset(main_dir='/scratch/mrvl005h/data/')
+dataset = Image_dataset(main_dir="/scratch/mrvl005h/data/")
 
 
 # Create a data loader
+
 
 def convert_dataset(dset, name):
     writer = ffcv.writer.DatasetWriter(
