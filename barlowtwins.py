@@ -139,7 +139,7 @@ Customedata = Image_dataset(main_dir="/scratch/mrvl005h/data")
 
 
 def objective(trial):
-    batch_size = trial.suggest_categorical("batch_size", [32, 64, 128, 256])
+    batch_size = trial.suggest_categorical("batch_size", [32,64,128,256,512,1024])
     learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-1)
     step_size = trial.suggest_categorical("step_size", [10, 20, 30, 40, 50])
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -197,10 +197,13 @@ def objective(trial):
     return avg_loss.item()
 
 
-study = optuna.create_study(direction="maximize")
-study.optimize(objective, n_trials=100)
+study = optuna.create_study(direction="minimize")
+study.optimize(objective, n_trials=5)
 
-
+important_fig = optuna.visualization.plot_param_importances(study)
+important_fig.savefig("param_importances.png")
+intermediate = optuna.visualization.plot_intermediate_values(study)
+intermediate.savefig("intermediate_values.png")
 # ...
 
 # Save the best trial values to a JSON file
@@ -209,17 +212,17 @@ study.optimize(objective, n_trials=100)
 print("Number of finished trials:", len(study.trials))
 
 best_trials = []
-trials_df = study.trials_dataframe()
+# trials_df = study.trials_dataframe()
 
-# Convert the DataFrame to a JSON string
-json_string = trials_df.to_json(orient="records", lines=True)
+# # Convert the DataFrame to a JSON string
+# json_string = trials_df.to_json(orient="records", lines=True)
 
-# Specify the file path where you want to save the JSON file
-json_file_path = "optuna_results.json"
+# # Specify the file path where you want to save the JSON file
+# json_file_path = "optuna_results.json"
 
-# Write the JSON string to the file
-with open(json_file_path, "w") as json_file:
-    json_file.write(json_string)
+# # Write the JSON string to the file
+# with open(json_file_path, "w") as json_file:
+#     json_file.write(json_string)
 
 
 for trial in study.trials:
@@ -230,8 +233,7 @@ with open("optuna_logging.json", "w") as file:
     json.dump(best_trials, file)
 
 print(
-    f"optuna logging file saved to {file.name} and optuna results file saved to {json_file_path}"
-)
+    f"optuna logging file saved to {file.name}")
 print("  Value: ", trial.value)
 print("  Params: ")
 for key, value in trial.params.items():
