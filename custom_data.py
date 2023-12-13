@@ -22,8 +22,8 @@ class Image_dataset(Dataset):
         img_loc2 = os.path.join(
             self.main_dir, self.all_imgs[(idx + 1) % self.total_imgs]
         )  # get the next image
-        image1 = Image.open(img_loc1).resize((224, 224))
-        image2 = Image.open(img_loc2).resize((224, 224))
+        image1 = Image.open(img_loc1).resize((200, 200))
+        image2 = Image.open(img_loc2).resize((200, 200))
         tensor_image1 = self.transform(image1)
         tensor_image2 = self.transform(image2)
         return tensor_image1, tensor_image2

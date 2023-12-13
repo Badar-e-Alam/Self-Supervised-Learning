@@ -33,7 +33,7 @@ from PIL import Image
 import os
 from custom_data import Image_dataset
 import json
-
+from optuna.visualization import matplotlib as optuna_matplotlib
 
 # from ffcv.writer import DatasetWriter
 # from ffcv.fields import RGBImageField, IntField
@@ -143,7 +143,7 @@ Customedata = Image_dataset(main_dir="/scratch/mrvl005h/data")
 
 
 def objective(trial):
-    batch_size = trial.suggest_categorical("batch_size", [32,64,128,256])
+    batch_size = trial.suggest_categorical("batch_size", [32, 64, 128, 256])
     learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-1)
     step_size = trial.suggest_categorical("step_size", [10, 20, 30, 40, 50])
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -205,19 +205,26 @@ def objective(trial):
 study = optuna.create_study(direction="minimize")
 study.optimize(objective, n_trials=5)
 
-important_fig = optuna.visualization.plot_param_importances(study)
-pio.write_image(important_fig, 'param_importances.png')
+optuna_matplotlib.plot_optimization_history(study).write_image('optimization_history.png')
 
-intermediate = optuna.visualization.plot_intermediate_values(study)
-pio.write_image(intermediate, 'intermediate_values.png')
+# Plot and save the parameter importances
+optuna_matplotlib.plot_param_importances(study).write_image('param_importances.png')
 
-important_fig = optuna.visualization.plot_param_importances(study)
-mpl_fig = mpl_to_plotly(important_fig)
-plt.savefig("param_importances1.png")
+# Plot and save the slice plot
+optuna_matplotlib.plot_slice(study).write_image('slice_plot.png')
+# important_fig = optuna.visualization.plot_param_importances(study)
+# pio.write_image(important_fig, "param_importances.png")
 
-intermediate = optuna.visualization.plot_intermediate_values(study)
-mpl_fig = mpl_to_plotly(intermediate)
-plt.savefig("intermediate_values1.png")
+# intermediate = optuna.visualization.plot_intermediate_values(study)
+# pio.write_image(intermediate, "intermediate_values.png")
+
+# important_fig = optuna.visualization.plot_param_importances(study)
+# mpl_fig = mpl_to_plotly(important_fig)
+# plt.savefig("param_importances1.png")
+
+# intermediate = optuna.visualization.plot_intermediate_values(study)
+# mpl_fig = mpl_to_plotly(intermediate)
+# plt.savefig("intermediate_values1.png")
 
 # Save the best trial values to a JSON file
 
@@ -245,8 +252,7 @@ for trial in study.trials:
 with open("optuna_logging.json", "w") as file:
     json.dump(best_trials, file)
 
-print(
-    f"optuna logging file saved to {file.name}")
+print(f"optuna logging file saved to {file.name}")
 print("  Value: ", trial.value)
 print("  Params: ")
 for key, value in trial.params.items():
