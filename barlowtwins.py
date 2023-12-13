@@ -5,7 +5,11 @@ import optuna
 import torch
 import torchvision
 from torch import nn
+
+import plotly.io as pio
 import tqdm
+import matplotlib.pyplot as plt
+from plotly.tools import mpl_to_plotly
 from torchvision.utils import make_grid
 from torch.utils.tensorboard import SummaryWriter
 
@@ -44,7 +48,7 @@ class BarlowTwins(nn.Module):
     def __init__(self, backbone):
         super().__init__()
         self.backbone = backbone
-        self.projection_head = BarlowTwinsProjectionHead(512, 2048, 2048)
+        self.projection_head = BarlowTwinsProjectionHead(2048, 2048, 2048)
 
     def forward(self, x):
         x = self.backbone(x).flatten(start_dim=1)
@@ -52,7 +56,7 @@ class BarlowTwins(nn.Module):
         return z
 
 
-resnet = torchvision.models.resnet18()
+resnet = torchvision.models.resnet50()
 resnet.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
 backbone = nn.Sequential(*list(resnet.children())[:-1])
 model = BarlowTwins(backbone)
@@ -139,13 +143,14 @@ Customedata = Image_dataset(main_dir="/scratch/mrvl005h/data")
 
 
 def objective(trial):
-    batch_size = trial.suggest_categorical("batch_size", [32,64,128,256,512,1024])
+    batch_size = trial.suggest_categorical("batch_size", [32,64,128,256])
     learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-1)
     step_size = trial.suggest_categorical("step_size", [10, 20, 30, 40, 50])
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=step_size, gamma=0.1
     )
+    print(f"batch_size: {batch_size}")
     train_data_loader = torch.utils.data.DataLoader(
         Customedata,
         batch_size=batch_size,
@@ -201,10 +206,18 @@ study = optuna.create_study(direction="minimize")
 study.optimize(objective, n_trials=5)
 
 important_fig = optuna.visualization.plot_param_importances(study)
-important_fig.savefig("param_importances.png")
+pio.write_image(important_fig, 'param_importances.png')
+
 intermediate = optuna.visualization.plot_intermediate_values(study)
-intermediate.savefig("intermediate_values.png")
-# ...
+pio.write_image(intermediate, 'intermediate_values.png')
+
+important_fig = optuna.visualization.plot_param_importances(study)
+mpl_fig = mpl_to_plotly(important_fig)
+plt.savefig("param_importances1.png")
+
+intermediate = optuna.visualization.plot_intermediate_values(study)
+mpl_fig = mpl_to_plotly(intermediate)
+plt.savefig("intermediate_values1.png")
 
 # Save the best trial values to a JSON file
 
