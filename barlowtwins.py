@@ -20,30 +20,13 @@ from lightly.transforms.byol_transform import (
     BYOLView1Transform,
     BYOLView2Transform,
 )
-
-# import ffcv
-# import ffcv.fields.decoders as decoders
-# from ffcv.fields import RGBImageField, IntField
-# from ffcv.writer import DatasetWriter
-# from ffcv.fields import RGBImageField
-# import torch
-# from torch.utils.data import Dataset
-# from torchvision import transforms
+import math
 from PIL import Image
 import os
 from custom_data import Image_dataset
 import json
-from optuna.visualization import matplotlib as optuna_matplotlib
 
-# from ffcv.writer import DatasetWriter
-# from ffcv.fields import RGBImageField, IntField
-# from torch.utils.data import Dataset, DataLoader
-# from ffcv.loader import Loader
-# from ffcv.transforms import ToTensor, ToDevice
-# import ffcv
-# import ffcv.fields as fields
-# import ffcv.fields.decoders as decoders
-# import ffcv.transforms as transforms
+
 class BarlowTwins(nn.Module):
     def __init__(self, backbone):
         super().__init__()
@@ -72,188 +55,70 @@ transform = BYOLTransform(
     view_1_transform=BYOLView1Transform(input_size=32, gaussian_blur=0.0),
     view_2_transform=BYOLView2Transform(input_size=32, gaussian_blur=0.0),
 )
-# output_file = 'dataset.beton'
-# main_dir="data/"
-# def write_dataset_to_beton(dataset, output_file):
-#     writer = DatasetWriter(output_file, {
-#         'image1': RGBImageField(),
-#         'image2': RGBImageField(),
-#         'label': IntField()
-#     })
-#     writer.from_indexed_dataset(dataset)
-#     writer.close()
+batch_size = 256
 
-# if not os.path.exists(main_dir):
-#     raise FileNotFoundError(f"The directory {main_dir} does not exist.")
 
-# # Create an instance of your dataset
-# dataset = Image_dataset(main_dir)
-# CIFAR_MEAN = [0.485, 0.456, 0.406]
-# CIFAR_STD = [0.229, 0.224, 0.225]
+def adjust_learning_rate(epoch, optimizer, loader, step):
+    max_steps = epoch * len(loader)
+    warmup_steps = 10 * len(loader)
+    base_lr = batch_size / 256
+    if step < warmup_steps:
+        lr = base_lr * step / warmup_steps
+    else:
+        step -= warmup_steps
+        max_steps -= warmup_steps
+        q = 0.5 * (1 + math.cos(math.pi * step / max_steps))
+        end_lr = base_lr * 0.001
+        lr = base_lr * q + end_lr * (1 - q)
+    optimizer.param_groups[0]["lr"] = lr * 0.2
+    optimizer.param_groups[1]["lr"] = lr * 0.048
 
-# def get_image_pipeline(train=True):
-#     augmentation_pipeline = (
-#         [
-#             transforms.RandomHorizontalFlip(),
-#             transforms.RandomTranslate(padding=2),
-#             transforms.Cutout(8, tuple(map(int, CIFAR_MEAN))),
-#         ]
-#         if train
-#         else []
-#     )
 
-#     image_pipeline = (
-#         [decoders.SimpleRGBImageDecoder()]
-#         + augmentation_pipeline
-#         + [
-#             transforms.ToTensor(),
-#             transforms.ToDevice(device, non_blocking=True),
-#             transforms.ToTorchImage(),
-#             transforms.Convert(torch.float32),
-#             torchvision.transforms.Normalize(CIFAR_MEAN, CIFAR_STD),
-#         ]
-#     )
-#     return image_pipeline
+def lr_lambda(current_epoch):
+    # Adjust scaling factor as needed
+    scaling_factor = 0.1
+    return scaling_factor / ((current_epoch + 1) ** 0.5)
 
-# # Write the dataset to a binary file if the output file doesn't exist
 
-# train_image_pipeline = get_image_pipeline(train=True)
-
-# if not os.path.exists(output_file):
-#     write_dataset_to_beton(dataset, output_file)
-
-# loader = Loader(
-#     output_file,
-#     batch_size=32,
-#     num_workers=4,
-#     order=ffcv.loader.OrderOption.SEQUENTIAL,
-#     drop_last=False,
-# )
-
-# dataset = Image_dataset(main_dir='/scratch/mrv1005h/data/')
-# train_data = torchvision.datasets.CIFAR10(
-#     "datasets/cifar10", download=True, transform=transform, train=True
-# )
-# # test_data = torchvision.datasets.CIFAR10(
-# #     "datasets/cifar10", download=True, transform=transform, train=False
-# # )
-# #or create a dataset from a folder containing images or videos:
-# #dataset = LightlyDataset("/scratch/mrv1005h/data/", transform=transform)
+# Create a learning rate scheduler
 Customedata = Image_dataset(main_dir="/scratch/mrvl005h/data")
+train_data_loader = torch.utils.data.DataLoader(
+    Customedata,
+    batch_size=batch_size,
+    shuffle=True,
+    drop_last=True,
+    num_workers=4,
+)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.002)
+scheduler = torch.optimLambdaLR(optimizer, lr_lambda=lr_lambda)
 
 
-def objective(trial):
-    batch_size = trial.suggest_categorical("batch_size", [32, 64, 128, 256])
-    learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-1)
-    step_size = trial.suggest_categorical("step_size", [10, 20, 30, 40, 50])
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=step_size, gamma=0.1
-    )
-    print(f"batch_size: {batch_size}")
-    train_data_loader = torch.utils.data.DataLoader(
-        Customedata,
-        batch_size=batch_size,
-        shuffle=True,
-        drop_last=True,
-        num_workers=4,
-    )
-
-    # test_data_loader = torch.utils.data.DataLoader(
-    #     test_data,
-    #     batch_size=50,
-    #     shuffle=True,
-    #     drop_last=True,
-    #     num_workers=0,
-    # )
-
-    criterion = BarlowTwinsLoss()
-    print("Starting Training")
+criterion = BarlowTwinsLoss()
+print("Starting Training")
+for epoch in tqdm.tqdm(range(1000)):
+    model.train()
     avg_loss = 0.0
-    # for epoch in tqdm.tqdm(range(100)):
+    scheduler.step(epoch)
     total_loss = 0.0
-    #     print(f"epoch: {epoch:>02}")
+    print(f"epoch: {epoch:>02}")
     for index, batch in tqdm.tqdm(enumerate(train_data_loader)):
         x0, x1 = batch
         x0 = x0.to(device)
         x1 = x1.to(device)
         z0 = model(x0)
         z1 = model(x1)
+        adjust_learning_rate(epoch, optimizer, train_data_loader, index)
         loss = criterion(z0, z1)
         total_loss += loss.detach()
-
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        scheduler.step()
-        # if index % 100 == 0:
-        # iter_num = index + 1
-        # writer.add_scalar("Loss/train", round(loss.item(), 2), iter_num)
-        # img_grid = make_grid(x0)
-        # writer.add_image('Input Images/x0', img_grid, iter_num)
-        # img_grid = make_grid(x1)
-        # writer.add_image('Input Images/x1', img_grid, iter_num)
-        # writer.add_histogram('Model outputs/z0', z0, iter_num)
-        # writer.add_histogram('Model outputs/z1', z1, iter_num)
 
     avg_loss = total_loss / len(train_data_loader)
+    writer.add_scalar("Loss/train", avg_loss, epoch)
+    writer.add_scalar("Learning_rate", optimizer.param_groups[0]["lr"], epoch)
 
-    torch.save(model.backbone.state_dict(), f"runs/barlowtwins/model_{0}.pt")
-    return avg_loss.item()
-
-
-study = optuna.create_study(direction="minimize")
-study.optimize(objective, n_trials=5)
-
-optuna_matplotlib.plot_optimization_history(study).write_image('optimization_history.png')
-
-# Plot and save the parameter importances
-optuna_matplotlib.plot_param_importances(study).write_image('param_importances.png')
-
-# Plot and save the slice plot
-optuna_matplotlib.plot_slice(study).write_image('slice_plot.png')
-# important_fig = optuna.visualization.plot_param_importances(study)
-# pio.write_image(important_fig, "param_importances.png")
-
-# intermediate = optuna.visualization.plot_intermediate_values(study)
-# pio.write_image(intermediate, "intermediate_values.png")
-
-# important_fig = optuna.visualization.plot_param_importances(study)
-# mpl_fig = mpl_to_plotly(important_fig)
-# plt.savefig("param_importances1.png")
-
-# intermediate = optuna.visualization.plot_intermediate_values(study)
-# mpl_fig = mpl_to_plotly(intermediate)
-# plt.savefig("intermediate_values1.png")
-
-# Save the best trial values to a JSON file
-
-# Print the optimization results
-print("Number of finished trials:", len(study.trials))
-
-best_trials = []
-# trials_df = study.trials_dataframe()
-
-# # Convert the DataFrame to a JSON string
-# json_string = trials_df.to_json(orient="records", lines=True)
-
-# # Specify the file path where you want to save the JSON file
-# json_file_path = "optuna_results.json"
-
-# # Write the JSON string to the file
-# with open(json_file_path, "w") as json_file:
-#     json_file.write(json_string)
-
-
-for trial in study.trials:
-    best_trial_values = {"value": trial.value, "params": trial.params}
-    best_trials.append(best_trial_values)
-
-with open("optuna_logging.json", "w") as file:
-    json.dump(best_trials, file)
-
-print(f"optuna logging file saved to {file.name}")
-print("  Value: ", trial.value)
-print("  Params: ")
-for key, value in trial.params.items():
-    print(f"    {key}: {value}")
+    print(f"epoch: {epoch:>02}  avg_loss: {avg_loss:.2f}")
+    if epoch % 50 == 0:
+        print("Saving model")
+        torch.save(model.backbone.state_dict(), f"runs/barlowtwins/model_{epoch}.pt")

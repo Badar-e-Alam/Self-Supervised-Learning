@@ -15,7 +15,7 @@ class VICReg(nn.Module):
     def __init__(self, backbone):
         super().__init__()
         self.backbone = backbone
-        self.projection_head = VICRegProjectionHead(
+        self.projection_head = VICRegProjectiofnHead(
             input_dim=512,
             hidden_dim=2048,
             output_dim=2048,
