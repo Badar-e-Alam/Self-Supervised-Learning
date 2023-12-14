@@ -81,7 +81,7 @@ def lr_lambda(current_epoch):
 
 
 # Create a learning rate scheduler
-Customedata = Image_dataset(main_dir="/scratch/mrvl005h/data")
+Customedata = Image_dataset(main_dir="/scratch/mrvl005h/Image_data/")
 train_data_loader = torch.utils.data.DataLoader(
     Customedata,
     batch_size=batch_size,
@@ -90,15 +90,14 @@ train_data_loader = torch.utils.data.DataLoader(
     num_workers=4,
 )
 optimizer = torch.optim.Adam(model.parameters(), lr=0.002)
-scheduler = torch.optimLambdaLR(optimizer, lr_lambda=lr_lambda)
-
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.20)
 
 criterion = BarlowTwinsLoss()
 print("Starting Training")
+model.train()
 for epoch in tqdm.tqdm(range(1000)):
-    model.train()
     avg_loss = 0.0
-    scheduler.step(epoch)
+    scheduler.step()
     total_loss = 0.0
     print(f"epoch: {epoch:>02}")
     for index, batch in tqdm.tqdm(enumerate(train_data_loader)):
@@ -107,7 +106,7 @@ for epoch in tqdm.tqdm(range(1000)):
         x1 = x1.to(device)
         z0 = model(x0)
         z1 = model(x1)
-        adjust_learning_rate(epoch, optimizer, train_data_loader, index)
+        #adjust_learning_rate(epoch, optimizer, train_data_loader, index)
         loss = criterion(z0, z1)
         total_loss += loss.detach()
         loss.backward()
