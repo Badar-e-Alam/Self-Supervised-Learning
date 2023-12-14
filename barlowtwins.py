@@ -139,7 +139,7 @@ transform = BYOLTransform(
 # # )
 # #or create a dataset from a folder containing images or videos:
 # #dataset = LightlyDataset("/scratch/mrv1005h/data/", transform=transform)
-Customedata = Image_dataset(main_dir="/scratch/mrvl005h/data")
+Customedata = Image_dataset(main_dir="/scratch/mrvl005h/Image_data/")
 
 
 def objective(trial):
@@ -198,38 +198,24 @@ def objective(trial):
 
     avg_loss = total_loss / len(train_data_loader)
 
-    torch.save(model.backbone.state_dict(), f"runs/barlowtwins/model_{0}.pt")
+    #torch.save(model.backbone.state_dict(), f"runs/barlowtwins/model_{0}.pt")
     return avg_loss.item()
 
 
 study = optuna.create_study(direction="minimize")
-study.optimize(objective, n_trials=5)
+study.optimize(objective, n_trials=100)
 
-optuna_matplotlib.plot_optimization_history(study).write_image('optimization_history.png')
+fig = optuna_matplotlib.plot_param_importances(study)
 
-# Plot and save the parameter importances
-optuna_matplotlib.plot_param_importances(study).write_image('param_importances.png')
+# Specify the file path and name (e.g., "image.png")
+file_path = "param_importances.png"
 
-# Plot and save the slice plot
-optuna_matplotlib.plot_slice(study).write_image('slice_plot.png')
-# important_fig = optuna.visualization.plot_param_importances(study)
-# pio.write_image(important_fig, "param_importances.png")
+# Save the Matplotlib figure using Matplotlib's savefig method
+plt.savefig(file_path)
 
-# intermediate = optuna.visualization.plot_intermediate_values(study)
-# pio.write_image(intermediate, "intermediate_values.png")
-
-# important_fig = optuna.visualization.plot_param_importances(study)
-# mpl_fig = mpl_to_plotly(important_fig)
-# plt.savefig("param_importances1.png")
-
-# intermediate = optuna.visualization.plot_intermediate_values(study)
-# mpl_fig = mpl_to_plotly(intermediate)
-# plt.savefig("intermediate_values1.png")
-
-# Save the best trial values to a JSON file
-
-# Print the optimization results
-print("Number of finished trials:", len(study.trials))
+fig = optuna.visualization.plot_pareto_front(study)
+fig_path = "pareto_front.png"
+plt.savefig(fig_path)
 
 best_trials = []
 # trials_df = study.trials_dataframe()
