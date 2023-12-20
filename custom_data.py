@@ -1,14 +1,25 @@
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
-from PIL import Image, ImageOps, ImageFilter,ImageFile
+import PIL
 import random
 import numpy as np
 
 import os
+import torch
+import pandas as pd
+import matplotlib.pyplot as plt
+def save_images_as_png(tensor_images, file_names):
+            for i in range(len(tensor_images)):
+                image = tensor_images[i].permute(1, 2, 0).numpy()
+                plt.imshow(image)
+                plt.axis('off')
+                plt.savefig(file_names[i], bbox_inches='tight', pad_inches=0)
+                plt.close()
 class Transform:
     def __init__(self):
         self.transform = transforms.Compose([
-            transforms.RandomResizedCrop(224, interpolation=Image.BICUBIC),
+            transforms.Resize((200, 200)),
+            #transforms.RandomResizedCrop(150, interpolation=Image.BICUBIC),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomApply(
                 [transforms.ColorJitter(brightness=0.4, contrast=0.4,
@@ -23,7 +34,8 @@ class Transform:
                                  std=[0.229, 0.224, 0.225])
         ])
         self.transform_prime = transforms.Compose([
-            transforms.RandomResizedCrop(224, interpolation=Image.BICUBIC),
+            transforms.Resize((200, 200)),
+            #transforms.RandomResizedCrop(150, interpolation=Image.BICUBIC),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomApply(
                 [transforms.ColorJitter(brightness=0.4, contrast=0.4,
@@ -41,8 +53,9 @@ class Transform:
     def __call__(self, x):
         y1 = self.transform(x)
         y2 = self.transform_prime(x)
+        
         return y1, y2
-    
+       
 class GaussianBlur(object):
     def __init__(self, p):
         self.p = p
@@ -50,7 +63,7 @@ class GaussianBlur(object):
     def __call__(self, img):
         if random.random() < self.p:
             sigma = random.random() * 1.9 + 0.1
-            return img.filter(ImageFilter.GaussianBlur(sigma))
+            return img.filter(PIL.ImageFilter.GaussianBlur(sigma))
         else:
             return img
 
@@ -61,32 +74,52 @@ class Solarization(object):
 
     def __call__(self, img):
         if random.random() < self.p:
-            return ImageOps.solarize(img)
+            return PIL.ImageOps.solarize(img)
         else:
             return img
 
 class Image_dataset(Dataset):
-    def __init__(self, main_dir,transform):
+    def __init__(self, main_dir):
         self.main_dir = main_dir
-        self.trns=transform
+        self.transform=Transform()
         self.all_imgs = os.listdir(main_dir)
-        self.transform =self.transform = transform.Compose([ transform.ToTensor(), transform.Normalize(mean=[0.5], std=[0.5])])
         self.total_imgs = len(self.all_imgs)
 
     def __len__(self):
         return self.total_imgs
 
     def __getitem__(self, idx):
-        ImageFile.LOAD_TRUNCATED_IMAGES = True
+        PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
 
         img_loc1 = os.path.join(self.main_dir, self.all_imgs[idx])
-        img_loc2 = os.path.join(
-            self.main_dir, self.all_imgs[(idx + 1) % self.total_imgs]
-        )
-        image1 = Image.open(img_loc1).resize((200, 200))
-        image2 = Image.open(img_loc2).resize((200, 200))
+        # img_loc2 = os.path.join(
+        #     self.main_dir, self.all_imgs[(idx + 1) % self.total_imgs]
+        # )
+        x = PIL.Image.open(img_loc1).convert("L").resize((200, 200))
+        # image2 = Image.open(img_loc2).resize((200, 200))
+        image1,image2=self.transform(x)
+
+        # tensor_image1 = self.transform(image1)
+        # tensor_image2 = self.transform(image2)
+        return image1, image2
 
 
-        tensor_image1 = self.transform(image1)
-        tensor_image2 = self.transform(image2)
-        return tensor_image1, tensor_image2
+
+class Winding_Dataset(Dataset):
+    def __init__(self, csv_file,root_dir):
+        self.data = pd.read_csv(csv_file)
+        self.transform=transforms.ToTensor()
+        self.main_dir = root_dir
+        self.total_imgs = len(self.data)
+
+    def __len__(self):
+        return self.total_imgs
+
+    def __getitem__(self, idx):
+        PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
+        img_loc1 = os.path.join(self.main_dir, self.data.iloc[idx, 0])
+        x = PIL.Image.open(img_loc1).convert("RGB").resize((200, 200))
+        labels = self.data.iloc[idx, self.data.columns.get_loc("0_nOK")]
+        labels = torch.tensor(labels, dtype=torch.float32)
+        Image = self.transform(x)
+        return Image, labels
