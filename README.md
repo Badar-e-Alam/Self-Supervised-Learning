@@ -1,24 +1,21 @@
-# Research Project - Vision Domain
+# Self-Supervised Learning with Barlow Twins and Multi-label Classification Optimization
 
-Welcome to our research project in the vision domain! This repository focuses on training the Barlow Twins algorithm on a custom dataset and involves an Optuna-based hyperparameter optimization pipeline. Additionally, the Barlow Twins algorithm will be leveraged as a feature extractor and fine-tuned for a classification task.
+This project implements self-supervised learning techniques, specifically using the Barlow Twins method. The implementation leverages the Lightly SSL package for the Barlow Twins model, with the official implementation available in `barlowtwins.py` and `meta.py`.
 
-## Dependencies
+The second step involves downstreaming the Barlow feature extractor for multi-label classification purposes. To optimize the hyperparameters and the architecture of the classifier model, we use Optuna. Optuna is also used for selecting other hyperparameters such as the optimization function and learning rate. Customized early stopping in Optuna is implemented for efficient training.
 
-Ensure you have the following dependencies installed before running the project:
+## Progress Checklist
 
-- [PyTorch](https://pytorch.org/)
-- [Optuna](https://optuna.org/)
-- [FFCV](#) *(Please provide the correct link)*
-- [Lightly](#) *(Please provide the correct link)*
+- [x] Training the Barlow Twins on a customized model
+- [x] Optimizing the hyperparameters with Optuna
+- [ ] Training the multi-label classifier on Barlow Twins (In Progress)
 
-## To-Do
-- Integrate the FFCV dataloader to enhance the training process efficiency.
+## Key Concepts
 
-## Getting Started
-
-To kickstart your exploration of this project, follow these steps:
-
-1. Clone the repository:
-
-   ```bash
-     https://github.com/Badar-e-Alam/Self-Supervised-Learning.git
+- **Self-Supervised Learning**: An unsupervised machine learning method where the data provides the supervision.
+- **Barlow Twins**: A self-supervised learning method that learns representations by making similar images look alike.
+- **Lightly SSL**: A Python package that provides tools for self-supervised learning.
+- **Downstreaming**: The process of using learned representations for a specific task.
+- **Multi-label Classification**: A type of classification where each sample can belong to multiple classes.
+- **Optuna**: An open-source hyperparameter optimization framework.
+- **Early Stopping**: A method to prevent overfitting by stopping the training process early if the model's performance stops improving on a hold out validation dataset.-  - 

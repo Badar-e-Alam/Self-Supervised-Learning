@@ -4,6 +4,7 @@ import json
 import optuna
 from optuna.visualization import plot_parallel_coordinate
 from optuna import create_study, Trial
+
 # Load the results from the JSON file
 with open("optuna_logging.json", "r") as file:
     data = json.load(file)
@@ -19,7 +20,7 @@ for trial_data in data:
     study._append_trial(frozen_trial)  # Add the trial to the study
 
 # Visualize the results using plot_parallel_coordinate()
-vis.plot_parallel_coordinate(study) # Add the trial to the study
+vis.plot_parallel_coordinate(study)  # Add the trial to the study
 
 # Visualize the results using plot_parallel_coordinate()
 plot_parallel_coordinate(study)

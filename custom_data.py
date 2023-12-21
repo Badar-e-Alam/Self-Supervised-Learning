@@ -1,120 +1,126 @@
-import torch
 from torch.utils.data import Dataset
-from torchvision.transforms import ToTensor
-from PIL import Image, ImageFile
-import os
+import torchvision.transforms as transforms
+import PIL
+import random
+import numpy as np
 
+import os
+import torch
+import pandas as pd
+import matplotlib.pyplot as plt
+def save_images_as_png(tensor_images, file_names):
+            for i in range(len(tensor_images)):
+                image = tensor_images[i].permute(1, 2, 0).numpy()
+                plt.imshow(image)
+                plt.axis('off')
+                plt.savefig(file_names[i], bbox_inches='tight', pad_inches=0)
+                plt.close()
+class Transform:
+    def __init__(self):
+        self.transform = transforms.Compose([
+            transforms.Resize((200, 200)),
+            #transforms.RandomResizedCrop(150, interpolation=Image.BICUBIC),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomApply(
+                [transforms.ColorJitter(brightness=0.4, contrast=0.4,
+                                        saturation=0.2, hue=0.1)],
+                p=0.8
+            ),
+            transforms.RandomGrayscale(p=0.2),
+            GaussianBlur(p=1.0),
+            Solarization(p=0.0),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+        ])
+        self.transform_prime = transforms.Compose([
+            transforms.Resize((200, 200)),
+            #transforms.RandomResizedCrop(150, interpolation=Image.BICUBIC),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomApply(
+                [transforms.ColorJitter(brightness=0.4, contrast=0.4,
+                                        saturation=0.2, hue=0.1)],
+                p=0.8
+            ),
+            transforms.RandomGrayscale(p=0.2),
+            GaussianBlur(p=0.1),
+            Solarization(p=0.2),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+        ])
+
+    def __call__(self, x):
+        y1 = self.transform(x)
+        y2 = self.transform_prime(x)
+        
+        return y1, y2
+       
+class GaussianBlur(object):
+    def __init__(self, p):
+        self.p = p
+
+    def __call__(self, img):
+        if random.random() < self.p:
+            sigma = random.random() * 1.9 + 0.1
+            return img.filter(PIL.ImageFilter.GaussianBlur(sigma))
+        else:
+            return img
+
+
+class Solarization(object):
+    def __init__(self, p):
+        self.p = p
+
+    def __call__(self, img):
+        if random.random() < self.p:
+            return PIL.ImageOps.solarize(img)
+        else:
+            return img
 
 class Image_dataset(Dataset):
     def __init__(self, main_dir):
         self.main_dir = main_dir
+        self.transform=Transform()
         self.all_imgs = os.listdir(main_dir)
-        self.transform = ToTensor()
         self.total_imgs = len(self.all_imgs)
 
     def __len__(self):
         return self.total_imgs
 
     def __getitem__(self, idx):
-        ImageFile.LOAD_TRUNCATED_IMAGES = True
+        PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
 
         img_loc1 = os.path.join(self.main_dir, self.all_imgs[idx])
-        img_loc2 = os.path.join(
-            self.main_dir, self.all_imgs[(idx + 1) % self.total_imgs]
-        )  # get the next image
-        image1 = Image.open(img_loc1).resize((224, 224))
-        image2 = Image.open(img_loc2).resize((224, 224))
-        tensor_image1 = self.transform(image1)
-        tensor_image2 = self.transform(image2)
-        return tensor_image1, tensor_image2
+        # img_loc2 = os.path.join(
+        #     self.main_dir, self.all_imgs[(idx + 1) % self.total_imgs]
+        # )
+        x = PIL.Image.open(img_loc1).convert("L").resize((200, 200))
+        # image2 = Image.open(img_loc2).resize((200, 200))
+        image1,image2=self.transform(x)
+
+        # tensor_image1 = self.transform(image1)
+        # tensor_image2 = self.transform(image2)
+        return image1, image2
 
 
-# import nvidia.dali.fn as fn
-# import nvidia.dali.types as types
-# from nvidia.dali.pipeline import Pipeline
-# from nvidia.dali.plugin.pytorch import DALIGenericIterator
-# from PIL import Image
-# import os
 
-# def check_images(main_dir):
-#     all_imgs = os.listdir(main_dir)
-#     total_imgs = len(all_imgs)
-#     valid_imgs = 0
-#     for img_file in all_imgs:
-#         try:
-#             img_path = os.path.join(main_dir, img_file)
-#             with Image.open(img_path) as img:
-#                 img.verify()
-#                 valid_imgs += 1
-#         except Exception as e:
-#             print(f"Error processing {img_file}: {e}")
-#     print(f"Total images: {total_imgs}")
-#     print(f"Valid images: {valid_imgs}")
+class Winding_Dataset(Dataset):
+    def __init__(self, csv_file,root_dir):
+        self.data = pd.read_csv(csv_file)
+        self.transform=transforms.ToTensor()
+        self.main_dir = root_dir
+        self.total_imgs = len(self.data)
 
-# class ImagePipeline(Pipeline):
-#     def __init__(self, batch_size, num_threads, device_id, data_dir):
-#         super(ImagePipeline, self).__init__(batch_size, num_threads, device_id, seed=12)
-#         self.input = fn.external_source(device=device_id, name="DALI_INPUT")
-#         self.decode = fn.image_decoder(device=device_id, output_type=types.RGB)
-#         self.resize = fn.resize(device=device_id, resize_x=224, resize_y=224)
-#         self.cmnp = fn.crop_mirror_normalize(device=device_id,
-#                                               output_dtype=types.FLOAT,
-#                                               output_layout=types.NCHW,
-#                                               crop=(224, 224),
-#                                               mean=[0.485, 0.456, 0.406],
-#                                               std=[0.229, 0.224, 0.225])
-#         self.coin = fn.coin_flip(probability=0.5)
+    def __len__(self):
+        return self.total_imgs
 
-#     def define_graph(self):
-#         rng = self.coin()
-#         self.jpegs = self.input()
-#         images = self.decode(self.jpegs)
-#         images = self.resize(images)
-#         output = self.cmnp(images.gpu(), mirror=rng)
-#         return (output, )
-
-# class ImageDataset(DALIGenericIterator):
-#     def __init__(self, main_dir, batch_size, num_threads, device_id):
-#         self.all_imgs = os.listdir(main_dir)
-#         self.total_imgs = len(self.all_imgs)
-#         print(check_images(main_dir))
-#         self.pipe = ImagePipeline(batch_size=batch_size, num_threads=num_threads, device_id=device_id, data_dir=main_dir)
-#         self.pipe.build()
-#         super().__init__(self.pipe, ["DALI_INPUT"], batch_size, auto_reset=True, fill_last_batch=False)
-
-# from nvidia.dali import pipeline_def
-# import nvidia.dali.fn as fn
-# import nvidia.dali.types as types
-# from nvidia.dali.plugin.pytorch import DALIGenericIterator
-
-# class Image_dataset:
-#     def __init__(self, main_dir, batch_size, num_threads, device_id):
-#         self.main_dir = main_dir
-#         self.all_imgs = os.listdir(main_dir)
-#         self.total_imgs = len(self.all_imgs)
-#         self.batch_size = batch_size
-#         self.num_threads = num_threads
-#         self.device_id = device_id
-
-#         self.pipes = self.dali_pipeline(device_id=self.device_id, num_threads=self.num_threads, batch_size=self.batch_size)
-#         self.pipes.build()
-#         self.loader = DALIGenericIterator(self.pipes, ['data1', 'data2'], self.total_imgs)
-
-#     @pipeline_def
-#     def dali_pipeline(self, device_id, num_threads, batch_size):
-#         images = fn.readers.file(file_root=self.main_dir, file_list=None, random_shuffle=True)
-#         images = fn.decoders.image(images, device='mixed', output_type=types.RGB)
-#         images = fn.resize(images, resize_x=224, resize_y=224)
-
-#         # Apply your transformations here
-#         # For example, to apply a random horizontal flip:
-#         images1 = fn.flip(images, horizontal=True)
-#         images2 = fn.flip(images, horizontal=True)
-
-#         return {"data1": images1, "data2": images2}
-
-#     def __len__(self):
-#         return self.total_imgs // self.batch_size
-
-#     def __iter__(self):
-#         return self.loader
+    def __getitem__(self, idx):
+        PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
+        img_loc1 = os.path.join(self.main_dir, self.data.iloc[idx, 0])
+        x = PIL.Image.open(img_loc1).convert("RGB").resize((200, 200))
+        column_names = self.data.columns[2:]  # Get the names of all columns starting from the third one
+        labels = self.data.loc[idx, column_names]  # Select data using column names
+        labels = torch.tensor(labels, dtype=torch.float32)
+        image = self.transform(x)
+        return image, labels
