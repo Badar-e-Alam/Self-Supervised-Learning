@@ -20,7 +20,7 @@ from lightly.transforms.byol_transform import (
 )
 import math
 from PIL import Image
-from custom_data import Image_dataset
+from custom_data import Image_dataset, Transform
 
 
 
@@ -35,15 +35,15 @@ class BarlowTwins(nn.Module):
         z = self.projection_head(x)
         return z
 
-resume = False
-batch_size = 256
-big_train = False
+resume = True
+batch_size = 512
+big_train = True
 resnet = torchvision.models.resnet50()
-resnet.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+# resnet.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
 backbone = nn.Sequential(*list(resnet.children())[:-1])
 if resume:
     print("Resume training")
-    weight_path = "model.pt"
+    weight_path = "barlowtwins_weights.pt"
     checkpoint=torch.load(weight_path)
     backbone.load_state_dict(checkpoint)
         
@@ -56,17 +56,13 @@ model.to(device)
 
 # BarlowTwins uses BYOL augmentations.
 # We disable resizing and gaussian blur for cifar10.
-transform = BYOLTransform(
-    view_1_transform=BYOLView1Transform(input_size=200, gaussian_blur=0.0),
-    view_2_transform=BYOLView2Transform(input_size=200, gaussian_blur=0.0),
-)
 
 
 
 def adjust_learning_rate(epoch, optimizer, loader, step):
     max_steps = epoch * len(loader)
     warmup_steps = 10 * len(loader)
-    base_lr = batch_size / 256
+    base_lr = batch_size / 4
     if step < warmup_steps:
         lr = base_lr * step / warmup_steps
     else:
@@ -98,19 +94,28 @@ def cosine_lr_scheduler(optimizer, warmup_iters, num_iters, lr_max, lr_min):
 
 
 # Create a learning rate scheduler
-if big_train:
-    Customedata = Image_dataset(main_dir="/scratch/mrvl005h/Image_data/",transform=transform)
-else:
-    Customedata = Image_dataset(main_dir="/home/vault/rzku/mrvl005h/data/Image_data/",transform=transform)
+# if big_train:
+#     Customedata = Image_dataset(main_dir="/scratch/mrvl005h/Image_data/single_class/")
+# else:
+#     Customedata = Image_dataset(main_dir="/home/vault/rzku/mrvl005h/data/Image_data/single_class/")
 
-print("loading data from: ", Customedata.main_dir)
-train_data_loader = torch.utils.data.DataLoader(
-    Customedata,
-    batch_size=batch_size,
-    shuffle=True,
-    drop_last=True,
-    num_workers=0,
-)
+# print("loading data from: ", Customedata.main_dir)
+# train_data_loader = torch.utils.data.DataLoader(
+#     Customedata,
+#     batch_size=batch_size,
+#     shuffle=True,
+#     drop_last=True,
+#     num_workers=0,
+# )
+if big_train:
+    data_path = "/scratch/mrvl005h/Image_data/"
+else:
+    data_path = "/home/vault/rzku/mrvl005h/data/Image_data/"
+dataset = torchvision.datasets.ImageFolder(data_path, Transform())
+   
+loader = torch.utils.data.DataLoader(
+        dataset, batch_size=batch_size, num_workers=0,
+        )
 optimizer = torch.optim.Adam(model.parameters())
 scheduler = cosine_lr_scheduler(optimizer, warmup_iters=100, num_iters=10000, lr_max=1e-3, lr_min=1e-5)
 
@@ -120,14 +125,13 @@ model.train()
 for epoch in tqdm.tqdm(range(1000)):
     avg_loss = 0.0
     total_loss = 0.0
-    print(f"epoch: {epoch:>02}")
-    for index, batch in tqdm.tqdm(enumerate(train_data_loader)):
-        import pdb; pdb.set_trace()
-        x0, x1 = batch
-        x0 = x0.to(device)
-        x1 = x1.to(device)
-        z0 = model(x0)
-        z1 = model(x1)
+    print(f"epoch: {epoch:>04}")
+    for step, ((y1, y2), _) in tqdm.tqdm(enumerate(loader, start=epoch * len(loader))):
+        y1 = y1.to(device)
+        y2 = y2.to(device)
+     
+        z0 = model(y1)
+        z1 = model(y2)
         #adjust_learning_rate(epoch, optimizer, train_data_loader, index)
         loss = criterion(z0, z1)
         total_loss += loss.detach()
@@ -135,7 +139,7 @@ for epoch in tqdm.tqdm(range(1000)):
         optimizer.step()
         optimizer.zero_grad()
     scheduler.step()
-    avg_loss = total_loss / len(train_data_loader)
+    avg_loss = total_loss / len(loader)
     writer.add_scalar("Loss/train", avg_loss, epoch)
     writer.add_scalar("Learning_rate", optimizer.param_groups[0]["lr"], epoch)
 
