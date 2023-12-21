@@ -22,13 +22,13 @@ import torchvision
 import torchvision.transforms as transforms
 
 parser = argparse.ArgumentParser(description='Barlow Twins Training')
-parser.add_argument('data', type=Path,default="/scratch/mrvl005h/Image_data/", metavar='DIR',
+parser.add_argument('data', type=Path, metavar='DIR',
                     help='path to dataset')
 parser.add_argument('--workers', default=8, type=int, metavar='N',
                     help='number of data loader workers')
 parser.add_argument('--epochs', default=1000, type=int, metavar='N',
                     help='number of total epochs to run')
-parser.add_argument('--batch-size', default=20, type=int, metavar='N',
+parser.add_argument('--batch-size', default=256, type=int, metavar='N',
                     help='mini-batch size')
 parser.add_argument('--learning-rate-weights', default=0.2, type=float, metavar='LR',
                     help='base learning rate for weights')
@@ -47,7 +47,7 @@ parser.add_argument('--checkpoint-dir', default='./checkpoint/', type=Path,
 
 
 def main():
-    writer = SummaryWriter("runs/barlowtwins")
+    writer = SummaryWriter("runs/meta_trainign")
     args = parser.parse_args()
     device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = BarlowTwins(args).to(device)
@@ -63,7 +63,7 @@ def main():
                      weight_decay_filter=True,
                      lars_adaptation_filter=True)
 
-    start_epoch=0
+    start_epoch=140
 
     dataset = torchvision.datasets.ImageFolder(args.data, Transform())
    
@@ -93,6 +93,8 @@ def main():
                                  time=int(time.time() - start_time))
                 writer.add_scalar("Loss/train", loss.item(), step)
                 writer.add_scalar("Learning_rate", optimizer.param_groups[0]["lr"], step)
+                print(json.dumps(stats))
+                print(f"epoch: {epoch:>02}  avg_loss: {loss.item():.2f}")
                 #print(json.dumps(stats))
 
         if epoch%100 == 0:
@@ -134,11 +136,19 @@ def off_diagonal(x):
 
 
 class BarlowTwins(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args,pretrained=True):
         super().__init__()
         self.args = args
-        self.backbone = torchvision.models.resnet50(zero_init_residual=True)
-        self.backbone.fc = nn.Identity()
+        # create the ResNet backbone
+        if pretrained:
+            model_path=torch.load("meta_checkpoint.pt")
+            self.backbone = torchvision.models.resnet50(pretrained=False)
+            self.backbone.fc = nn.Identity()
+            self.backbone.load_state_dict(model_path)
+
+        else:
+            self.backbone = torchvision.models.resnet50(zero_init_residual=True)
+            self.backbone.fc = nn.Identity()
 
         # projector
         sizes = [2048] + list(map(int, args.projector.split('-')))
@@ -239,7 +249,8 @@ class Solarization(object):
 class Transform:
     def __init__(self):
         self.transform = transforms.Compose([
-            transforms.RandomResizedCrop(224, interpolation=Image.BICUBIC),
+            transforms.Resize((200, 200)),
+            #transforms.RandomResizedCrop(150, interpolation=Image.BICUBIC),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomApply(
                 [transforms.ColorJitter(brightness=0.4, contrast=0.4,
@@ -254,7 +265,8 @@ class Transform:
                                  std=[0.229, 0.224, 0.225])
         ])
         self.transform_prime = transforms.Compose([
-            transforms.RandomResizedCrop(224, interpolation=Image.BICUBIC),
+            transforms.Resize((200, 200)),
+            #transforms.RandomResizedCrop(150, interpolation=Image.BICUBIC),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomApply(
                 [transforms.ColorJitter(brightness=0.4, contrast=0.4,
@@ -272,8 +284,10 @@ class Transform:
     def __call__(self, x):
         y1 = self.transform(x)
         y2 = self.transform_prime(x)
+        
         return y1, y2
 
 
 if __name__ == '__main__':
+    print("Starting training checkpoint loading")
     main()
