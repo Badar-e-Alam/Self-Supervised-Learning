@@ -18,4 +18,4 @@ The second step involves downstreaming the Barlow feature extractor for multi-la
 - **Downstreaming**: The process of using learned representations for a specific task.
 - **Multi-label Classification**: A type of classification where each sample can belong to multiple classes.
 - **Optuna**: An open-source hyperparameter optimization framework.
-- **Early Stopping**: A method to prevent overfitting by stopping the training process early if the model's performance stops improving on a hold out validation dataset.
+- **Early Stopping**: A method to prevent overfitting by stopping the training process early if the model's performance stops improving on a hold out validation dataset.-  - 

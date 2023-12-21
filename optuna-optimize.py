@@ -140,7 +140,8 @@ def test_model(model, test_loader, loss_fn, epoch, writer):
             barlow_features = barlow_backbone(data)
             barlow_features = barlow_features.view(barlow_features.size(0), -1)
             model_output = model(barlow_features)
-            test_loss.extend(loss_fn(model_output, target))
+            
+            test_loss.append(loss_fn(model_output, target).item())
             # Apply sigmoid activation to get probabilities for each class
             preds = torch.sigmoid(model_output)
             all_preds.extend(preds.cpu().numpy())

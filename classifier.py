@@ -102,6 +102,9 @@ def train_classifier(small_train=True,barlow=True):
         def forward(self, x):
             x = self.fc(x)
             return x
+        def forward(self, x):
+            x = self.fc(x)
+            return x
 
 
     barlow=barlow

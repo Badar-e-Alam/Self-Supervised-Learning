@@ -35,9 +35,9 @@ class BarlowTwins(nn.Module):
         z = self.projection_head(x)
         return z
 
-resume = True
-batch_size = 512
-big_train = True
+resume = False
+batch_size = 256
+big_train = False
 resnet = torchvision.models.resnet50()
 # resnet.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
 backbone = nn.Sequential(*list(resnet.children())[:-1])
