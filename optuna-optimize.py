@@ -39,7 +39,7 @@ current_time = datetime.now().strftime("%b%d_%H-%M-%S")
 logs = os.path.join(expriment_results, current_time)
 writer = SummaryWriter(log_dir=logs)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-BATCHSIZE = 400
+BATCHSIZE = 256
 CLASSES = 3
 EPOCH = 10
 N_TRAIN_EXAMPLES = BATCHSIZE * 50
@@ -140,17 +140,18 @@ def test_model(model, test_loader, loss_fn, epoch, writer):
             barlow_features = barlow_backbone(data)
             barlow_features = barlow_features.view(barlow_features.size(0), -1)
             model_output = model(barlow_features)
-            
             test_loss.append(loss_fn(model_output, target).item())
+            preds=(model_output>0.5).float()
+
             # Apply sigmoid activation to get probabilities for each class
-            preds = torch.sigmoid(model_output)
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(target.cpu().numpy())
+            all_preds.append(preds.cpu().numpy())
+            all_labels.append(target.cpu().numpy())
             if batch_idx % 200 == 0:
                 print(f"testing loss: {np.average(test_loss)}")
 
-            if batch_idx < N_VALID_EXAMPLES:
-                break
+            # if batch_idx < N_VALID_EXAMPLES:
+            #     break
+    # import pdb; pdb.set_trace()
 
     overall_accuracy = accuracy_score(
         np.concatenate(all_labels), np.concatenate(all_preds)
@@ -216,7 +217,9 @@ if __name__ == "__main__":
         direction="maximize",
         pruner=optuna.pruners.MedianPruner(),
     )
-    study.optimize(objective, callbacks=partial(early_stopping, early_stopping=20))
+    early_stopping_callback = partial(early_stopping, early_stopping=20)
+
+    study.optimize(objective, callbacks=[partial(early_stopping_callback)])
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
