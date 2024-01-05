@@ -60,6 +60,7 @@ def early_stopping(study, trail, early_stopping=10):
     best_trial = study.best_trial.number
     should_stop = (current_trial - best_trial) > early_stopping
     if should_stop:
+        print("early stopping detected")
         logger.debug("early stopping detected: %s", should_stop)
         study.stop()
 
@@ -71,7 +72,7 @@ def define_model(trial):
 
     in_features = 2048
     for i in range(n_layers):
-        out_features = trial.suggest_int("n_units_l{}".format(i), 256, 512)
+        out_features = trial.suggest_int("n_units_l{}".format(i), 32, 512)
         layers.append(nn.Linear(in_features, out_features))
         layers.append(nn.ReLU())
         p = trial.suggest_float("dropout_l{}".format(i), 0.1, 0.4)
@@ -203,6 +204,7 @@ def objective(trial):
         accuracy.append(acc)
         # Handle pruning based on the intermediate value.
         if trial.should_prune():
+            print("pruning trial: ", trial.number)
             raise optuna.exceptions.TrialPruned()
 
     return np.average(accuracy)

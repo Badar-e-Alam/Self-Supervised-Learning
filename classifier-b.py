@@ -13,7 +13,7 @@ BATCHSIZE = 256
 DEVICE=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 barlow_backbone = torchvision.models.resnet50(weights=None)
 barlow_backbone = nn.Sequential(*list(barlow_backbone.children())[:-1])
-barlow_backbone.load_state_dict(torch.load("train_weights/lightly-barlow-weights.pt"))
+barlow_backbone.load_state_dict(torch.load("train_weights/Ligthly_trained.pt"))
 barlow_backbone.eval()
 barlow_backbone.to(DEVICE)
 writer=SummaryWriter("classifier-results")
@@ -118,7 +118,7 @@ class ClassifierModel(nn.Module):
             self.fc = nn.Sequential(
                     nn.Linear(num_features, 431),
                     nn.ReLU(),
-                    nn.Dropout(0.2979960641897257),
+                   # nn.Dropout(0.2979960641897257),
                     # nn.Dropout(dropout_rate),
                     nn.Linear(431, num_classes),
                     # nn.Softmax(dim=1) #because the problem is multiclass classification (4 classes) are equal to 1 
@@ -185,16 +185,16 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0019932144847006786)
     loss_fn = nn.BCELoss()
     early_stopping = EarlyStopping(patience=20, verbose=True)
-    model_path="classifier_weights"
+    model_path="classifier-results/model/"
     if not os.path.exists(model_path):
         os.makedirs(model_path)
 
-    for epoch in range(1, 1000):
-
+    for epoch in range(100, 1000):
+        print(f"epoch: {epoch}")
         model = train_model(model, train_loader, optimizer, loss_fn, epoch, writer)
         F1_scoure,test_loss= test_model(model, test_loader, loss_fn, epoch, writer)
         early_stopping(test_loss, model)
-        if epoch%50==0:
+        if epoch%100==0:
             model_file_path = os.path.join(model_path, f"model_{epoch}.pt")
             torch.save(model.state_dict(), model_file_path)#
             
