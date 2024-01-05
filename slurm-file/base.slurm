@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #
-#SBATCH --job-name=multilbl_class
+#SBATCH --job-name=base_model
 #SBATCH --clusters=tinygpu
 #SBATCH --nodes=1
 # --gres and --time required to communicate the required GPU and time period
@@ -10,7 +10,7 @@
 #SBATCH --export=NONE
 
 # useful variable
-exp_name=multilbl_class
+exp_name=base_model
 output_dir=/home/woody/rzku/mrvl005h/output/$exp_name
 scratch_dir=/scratch/mrvl005h
 
@@ -39,11 +39,11 @@ echo "unzipping data ..."
 cp /home/vault/rzku/mrvl005h/data/Image_data.zip .
 echo "Current working directory: $(pwd)"
 unzip Image_data.zip
-cd Image_data
+cd data
 echo "List of files and directories: $(ls)"
 echo "Current working directory: $(pwd)"
 
 cd $output_dir/Self-Supervised-Learning
 # run training
 echo "Running training ..."
-python3 classifier-b.py
+python3 base-classifier.py

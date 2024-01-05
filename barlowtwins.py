@@ -35,15 +35,15 @@ class BarlowTwins(nn.Module):
         z = self.projection_head(x)
         return z
 
-resume = False
-batch_size = 256
+resume = True
+batch_size = 10
 big_train = False
 resnet = torchvision.models.resnet50()
 # resnet.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
 backbone = nn.Sequential(*list(resnet.children())[:-1])
 if resume:
     print("Resume training")
-    weight_path = "barlowtwins_weights.pt"
+    weight_path = "train_weights/Ligthly_trained.pt"
     checkpoint=torch.load(weight_path)
     backbone.load_state_dict(checkpoint)
         
@@ -112,17 +112,17 @@ if big_train:
 else:
     data_path = "/home/vault/rzku/mrvl005h/data/Image_data/"
 dataset = torchvision.datasets.ImageFolder(data_path, Transform())
-   
+
 loader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size, num_workers=0,
+        dataset, batch_size=batch_size, num_workers=8,
         )
 optimizer = torch.optim.Adam(model.parameters())
-scheduler = cosine_lr_scheduler(optimizer, warmup_iters=100, num_iters=10000, lr_max=1e-3, lr_min=1e-5)
+scheduler = cosine_lr_scheduler(optimizer, warmup_iters=100, num_iters=1001, lr_max=1e-3, lr_min=1e-5)
 
 criterion = BarlowTwinsLoss()
 print("Starting Training")
 model.train()
-for epoch in tqdm.tqdm(range(1000)):
+for epoch in tqdm.tqdm(range(200, 1001)):
     avg_loss = 0.0
     total_loss = 0.0
     print(f"epoch: {epoch:>04}")
@@ -146,4 +146,4 @@ for epoch in tqdm.tqdm(range(1000)):
     print(f"epoch: {epoch:>02}  avg_loss: {avg_loss:.2f}")
     if epoch % 50 == 0:
         print("Saving model")
-        torch.save(model.backbone.state_dict(), f"runs/barlowtwins/model.pt")
+        torch.save(model.backbone.state_dict(), f"runs/barlowtwins/model-{epoch}.pt")

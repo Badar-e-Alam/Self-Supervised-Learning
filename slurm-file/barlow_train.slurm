@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #
-#SBATCH --job-name=barlowtwins_resnet50_train
+#SBATCH --job-name=Lightly-RT
 #SBATCH --clusters=tinygpu
 #SBATCH --nodes=1
 # --gres and --time required to communicate the required GPU and time period
@@ -10,7 +10,7 @@
 #SBATCH --export=NONE
 
 # useful variable
-exp_name=barlowtwins_resnet50_train
+exp_name=Lightly-RT
 output_dir=/home/woody/rzku/mrvl005h/output/$exp_name
 scratch_dir=/scratch/mrvl005h
 # load modules
@@ -45,4 +45,4 @@ echo "Current working directory: $(pwd)"
 cd $output_dir/Self-Supervised-Learning
 # run training
 echo "Running training ..."
-python3 meta.py
+python3 barlowtwins.py
