@@ -1,4 +1,4 @@
-Image,0_nOK,1_Doppelwindung,2_Luecke,3_Kreuzung
+﻿image,binary_NOK,multi-label_double_winding,multi-label_gap,multi-label_crossing
 Spule001_Image0001.jpg,0,0,0,0
 Spule001_Image0002.jpg,0,0,0,0
 Spule001_Image0003.jpg,0,0,0,0

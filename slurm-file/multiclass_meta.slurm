@@ -1,16 +1,17 @@
 #!/bin/bash -l
 #
-#SBATCH --job-name=multilbl_barlow_base
+#SBATCH --job-name=multilbl_meta_base
 #SBATCH --clusters=tinygpu
 #SBATCH --nodes=1
 # --gres and --time required to communicate the required GPU and time period
-#SBATCH --gres=gpu:rtx3080:1
+#SBATCH --gres=gpu:a100:1
+#SBATCH --partition=a100
 #SBATCH --time=24:0:0
 #SBATCH --export=NONE
 
 # useful variable
-exp_name=multilbl_barlow_base
-output_dir=/home/woody/rzku/mrvl005h/output1/$exp_name
+exp_name=multilbl_meta_base
+output_dir=/home/woody/rzku/mrvl005h/output/$exp_name
 scratch_dir=/scratch/mrvl005h
 
 # load modules
@@ -45,4 +46,4 @@ echo "Current working directory: $(pwd)"
 cd $output_dir/Self-Supervised-Learning
 # run training
 echo "Running training ..."
-python3 classifier_model.py
+python3 classifier-b.py

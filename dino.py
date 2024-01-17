@@ -7,13 +7,17 @@ import copy
 import torch
 import torchvision
 from torch import nn
-
+import tqdm
+from lightly.data import LightlyDataset
 from lightly.loss import DINOLoss
 from lightly.models.modules import DINOProjectionHead
 from lightly.models.utils import deactivate_requires_grad, update_momentum
 from lightly.transforms.dino_transform import DINOTransform
 from lightly.utils.scheduler import cosine_schedule
+from custom_data import Image_dataset
+from torch.utils.tensorboard import SummaryWriter
 
+writer=SummaryWriter("dino-results")
 
 class DINO(torch.nn.Module):
     def __init__(self, backbone, input_dim):
@@ -33,14 +37,18 @@ class DINO(torch.nn.Module):
         return z
 
     def forward_teacher(self, x):
+
         y = self.teacher_backbone(x).flatten(start_dim=1)
         z = self.teacher_head(y)
         return z
 
-
+# vit6_weights=torch.load("base_model/vit_b_6.pt")
 resnet = torchvision.models.resnet18()
+# vit6.load_state_dict(vit6_weights)
 backbone = nn.Sequential(*list(resnet.children())[:-1])
-input_dim = 512
+# weight="train_weights/dino_backbone.pt"
+# backbone.load_state_dict(torch.load(weight))
+input_dim = 512	
 # instead of a resnet you can also use a vision transformer backbone as in the
 # original paper (you might have to reduce the batch size in this case):
 # backbone = torch.hub.load('facebookresearch/dino:main', 'dino_vits16', pretrained=False)
@@ -53,18 +61,25 @@ model.to(device)
 
 transform = DINOTransform()
 # we ignore object detection annotations by setting target_transform to return 0
-dataset = torchvision.datasets.VOCDetection(
-    "datasets/pascal_voc",
-    download=True,
-    transform=transform,
-    target_transform=lambda t: 0,
-)
-# or create a dataset from a folder containing images or videos:
-# dataset = LightlyDataset("path/to/folder")
+# dataset = torchvision.datasets.VOCDetection(
+#     "datasets/pascal_voc",
+#     download=True,
+#     transform=transform,
+#     target_transform=lambda t: 0,
+# )
+# data_path = "/scratch/mrvl005h/Image_data/"
+# # else:
+# #     data_path = "/home/vault/rzku/mrvl005h/data/Image_data/"
 
+# dataset = torchvision.datasets.ImageFolder(data_path, transform)
+
+# dataset=Image_dataset(data_path,transform=transform)
+# or create a dataset from a folder containing images or videos:
+dataset = LightlyDataset("/scratch/mrvl005h/Image_data", transform=transform)
+BATCH_SIZE=128
 dataloader = torch.utils.data.DataLoader(
     dataset,
-    batch_size=64,
+    batch_size=BATCH_SIZE,
     shuffle=True,
     drop_last=True,
     num_workers=8,
@@ -72,20 +87,20 @@ dataloader = torch.utils.data.DataLoader(
 
 criterion = DINOLoss(
     output_dim=2048,
-    warmup_teacher_temp_epochs=5,
 )
 # move loss to correct device because it also contains parameters
 criterion = criterion.to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-epochs = 10
+epochs = 1000
 
 print("Starting Training")
 for epoch in range(epochs):
+    print("epoch: ", epoch)
     total_loss = 0
     momentum_val = cosine_schedule(epoch, epochs, 0.996, 1)
-    for batch in dataloader:
+    for batch in tqdm.tqdm(dataloader):
         views = batch[0]
         update_momentum(model.student_backbone, model.teacher_backbone, m=momentum_val)
         update_momentum(model.student_head, model.teacher_head, m=momentum_val)
@@ -102,4 +117,8 @@ for epoch in range(epochs):
         optimizer.zero_grad()
 
     avg_loss = total_loss / len(dataloader)
+    if epoch%50==0:
+        torch.save(model.student_backbone.state_dict(), f"dino-results/dino_resnet50_{epoch}.pt")
+    writer.add_scalar("Loss/train", avg_loss, epoch)
+
     print(f"epoch: {epoch:>02}, loss: {avg_loss:.5f}")

@@ -1,15 +1,16 @@
 #!/bin/bash -l
 #
-#SBATCH --job-name=multilbl_barlow_base
+#SBATCH --job-name=dino_classification_4
 #SBATCH --clusters=tinygpu
 #SBATCH --nodes=1
 # --gres and --time required to communicate the required GPU and time period
 #SBATCH --gres=gpu:rtx3080:1
+
 #SBATCH --time=24:0:0
 #SBATCH --export=NONE
 
 # useful variable
-exp_name=multilbl_barlow_base
+exp_name=dino_classification_4
 output_dir=/home/woody/rzku/mrvl005h/output1/$exp_name
 scratch_dir=/scratch/mrvl005h
 
@@ -38,7 +39,7 @@ echo "unzipping data ..."
 cp /home/vault/rzku/mrvl005h/data/Image_data.zip .
 echo "Current working directory: $(pwd)"
 unzip Image_data.zip
-cd Image_data
+cd data
 echo "List of files and directories: $(ls)"
 echo "Current working directory: $(pwd)"
 
