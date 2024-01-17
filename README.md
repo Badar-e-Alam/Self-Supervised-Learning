@@ -20,4 +20,4 @@ The second step involves downstreaming the Barlow feature extractor for multi-la
 - **Optuna**: An open-source hyperparameter optimization framework.
 - **Early Stopping**: A method to prevent overfitting by stopping the training process early if the model's performance stops improving on a hold out validation dataset.-
 ## Results
-[Results comparison](figures/Bard_Chart_Image.png)
+![Results comparison](figures/Bard_Chart_Image.png)
