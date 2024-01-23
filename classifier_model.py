@@ -12,7 +12,7 @@ import time
 BATCHSIZE = 256
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("Code is executed on:", DEVICE)
-weight = "train_weights/lightly-barlow-weights.pt"
+weight = "train_weights/dino_backbone.pt"
 barlow_weight = torch.load(weight,map_location=DEVICE)
 resnet = torchvision.models.resnet50()
 barlow_backbone = nn.Sequential(*list(resnet.children())[:-1])
@@ -79,10 +79,10 @@ def get_data():
     # Load FashionMNIST dataset.
     dir_path = "/scratch/mrvl005h/Image_data"
     train_dataset = Winding_Dataset(
-        csv_file="data-csv/unique_train.csv", root_dir=dir_path
+        csv_file="data-csv/train.csv", root_dir=dir_path
     )
     valid_dataset = Winding_Dataset(
-        csv_file="data-csv/unique_val.csv", root_dir=dir_path
+        csv_file="data-csv/validation.csv", root_dir=dir_path
     )
     test_dataset = Winding_Dataset(
         csv_file="data-csv/linear_winding_labels_image_level_test_set_v2.0.csv", root_dir=dir_path
@@ -161,7 +161,10 @@ def train_model(model, train_loader, valid_loader, optimizer, loss_fn, epoch, wr
 
     return model,np.average(valid_loss)
 
-
+"""
+chaning the model as per the optuna 
+{'n_layers': 1, 'n_units_l0': 97, 'dropout_l0': 0.1957759240034611, 'optimizer': 'Adam', 'factor': 0.8061593655690279, 'patience': 8, 'scheduler': 'ReduceLROnPlateau', 'lr': 0.00268235679789218}
+"""
 
 class ClassifierModel(nn.Module):
     def __init__(self, num_features, num_classes):
@@ -169,12 +172,12 @@ class ClassifierModel(nn.Module):
         self.fc = nn.Sequential(
             nn.Linear(num_features, 1024),
             nn.LeakyReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.1957759240034611),
             nn.Linear(1024, 512),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(512, 431),
-            nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.LeakyReLU(),
+            nn.Dropout(0.1957759240034611),
             nn.Linear(431, num_classes),
             nn.Sigmoid(),
         )
@@ -243,7 +246,6 @@ class EarlyStopping:
 
 def main():
     print("Code is executed on:", DEVICE)
-    data_loading = time.time()
     print("Loading data")
     train_loader, test_loader,validation_data = get_data()
     model = ClassifierModel(2048, 3)
@@ -251,8 +253,11 @@ def main():
     # weight_path = "train_weights/multilbl_epoch_300.pt"
     # model.load_state_dict(torch.load(weight_path))
     model.to(DEVICE)
-    optimizer = torch.optim.Adam(model.parameters())  # lr=0.0019932144847006786
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=25, factor=0.1) # start decay lr if val_loss not decrease
+    """'optimizer': 'Adam', 'factor': 0.8061593655690279, 'patience': 8, 'scheduler': 'ReduceLROnPlateau', 'lr': 0.00268235679789218"""
+    optimizer = torch.optim.Adam(model.parameters(),lr=0.00268235679789218)  # lr=0.0019932144847006786
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=8, factor=0.8061593655690279) # start decay lr if val_loss not decrease
+    # optimizer = torch.optim.SGD(model.parameters(), lr=0.5, weight_decay=0.00002)
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200, eta_min=0)
     loss_fn = nn.BCELoss()
     model_path = "classification_results/model/"
 

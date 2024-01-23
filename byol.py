@@ -17,14 +17,14 @@ from lightly.transforms.byol_transform import (
     BYOLView2Transform,
 )
 from lightly.utils.scheduler import cosine_schedule
-
-
+from lightly.data import LightlyDataset
+import tqdm 
 class BYOL(nn.Module):
     def __init__(self, backbone):
         super().__init__()
 
         self.backbone = backbone
-        self.projection_head = BYOLProjectionHead(512, 1024, 256)
+        self.projection_head = BYOLProjectionHead(2048, 1024, 256)
         self.prediction_head = BYOLPredictionHead(256, 1024, 256)
 
         self.backbone_momentum = copy.deepcopy(self.backbone)
@@ -46,7 +46,7 @@ class BYOL(nn.Module):
         return z
 
 
-resnet = torchvision.models.resnet18()
+resnet = torchvision.models.resnet50()
 backbone = nn.Sequential(*list(resnet.children())[:-1])
 model = BYOL(backbone)
 
@@ -58,11 +58,11 @@ transform = BYOLTransform(
     view_1_transform=BYOLView1Transform(input_size=32, gaussian_blur=0.0),
     view_2_transform=BYOLView2Transform(input_size=32, gaussian_blur=0.0),
 )
-dataset = torchvision.datasets.CIFAR10(
-    "datasets/cifar10", download=True, transform=transform
-)
+# dataset = torchvision.datasets.CIFAR10(
+#     "datasets/cifar10", download=True, transform=transform
+# )
 # or create a dataset from a folder containing images or videos:
-# dataset = LightlyDataset("path/to/folder", transform=transform)
+dataset = LightlyDataset("/scratch/mrvl005h/Image_data", transform=transform)
 
 dataloader = torch.utils.data.DataLoader(
     dataset,
@@ -75,13 +75,13 @@ dataloader = torch.utils.data.DataLoader(
 criterion = NegativeCosineSimilarity()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.06)
 
-epochs = 10
+epochs = 1000
 
 print("Starting Training")
 for epoch in range(epochs):
     total_loss = 0
     momentum_val = cosine_schedule(epoch, epochs, 0.996, 1)
-    for batch in dataloader:
+    for batch in tqdm.tqdm(dataloader):
         x0, x1 = batch[0]
         update_momentum(model.backbone, model.backbone_momentum, m=momentum_val)
         update_momentum(

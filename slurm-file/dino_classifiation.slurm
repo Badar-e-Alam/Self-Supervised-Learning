@@ -1,15 +1,16 @@
 #!/bin/bash -l
 #
-#SBATCH --job-name=optuna_optimization
+#SBATCH --job-name=dino_classification_
 #SBATCH --clusters=tinygpu
 #SBATCH --nodes=1
 # --gres and --time required to communicate the required GPU and time period
 #SBATCH --gres=gpu:rtx3080:1
-#SBATCH --time=24:00:00
+
+#SBATCH --time=24:0:0
 #SBATCH --export=NONE
 
 # useful variable
-exp_name=optuna_optimization
+exp_name=dino_classification_big
 output_dir=/home/woody/rzku/mrvl005h/output1/$exp_name
 scratch_dir=/scratch/mrvl005h
 
@@ -45,7 +46,4 @@ echo "Current working directory: $(pwd)"
 cd $output_dir/Self-Supervised-Learning
 # run training
 echo "Running training ..."
-
-# run training
-echo "Running training ..."
-python3 optuna-optimize.py
+python3 classifier_model.py

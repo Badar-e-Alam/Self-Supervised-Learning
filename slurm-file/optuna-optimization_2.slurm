@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #
-#SBATCH --job-name=optuna_optimization
+#SBATCH --job-name=optuna_optimization_2
 #SBATCH --clusters=tinygpu
 #SBATCH --nodes=1
 # --gres and --time required to communicate the required GPU and time period
@@ -9,7 +9,7 @@
 #SBATCH --export=NONE
 
 # useful variable
-exp_name=optuna_optimization
+exp_name=optuna_optimization_2
 output_dir=/home/woody/rzku/mrvl005h/output1/$exp_name
 scratch_dir=/scratch/mrvl005h
 
@@ -48,4 +48,4 @@ echo "Running training ..."
 
 # run training
 echo "Running training ..."
-python3 optuna-optimize.py
+python3 optuna-optimize-update.py

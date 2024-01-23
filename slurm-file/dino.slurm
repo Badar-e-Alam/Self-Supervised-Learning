@@ -11,7 +11,7 @@
 
 # useful variable
 exp_name=Dino_backbone_small
-output_dir=/home/woody/rzku/mrvl005h/output/$exp_name
+output_dir=/home/woody/rzku/mrvl005h/output1/$exp_name
 scratch_dir=/scratch/mrvl005h
 
 # load modules

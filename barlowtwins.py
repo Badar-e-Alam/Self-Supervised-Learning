@@ -23,7 +23,6 @@ from PIL import Image
 from custom_data import Image_dataset, Transform
 
 
-
 class BarlowTwins(nn.Module):
     def __init__(self, backbone):
         super().__init__()
@@ -35,6 +34,7 @@ class BarlowTwins(nn.Module):
         z = self.projection_head(x)
         return z
 
+
 resume = True
 batch_size = 10
 big_train = False
@@ -44,9 +44,9 @@ backbone = nn.Sequential(*list(resnet.children())[:-1])
 if resume:
     print("Resume training")
     weight_path = "train_weights/Ligthly_trained.pt"
-    checkpoint=torch.load(weight_path)
+    checkpoint = torch.load(weight_path)
     backbone.load_state_dict(checkpoint)
-        
+
 model = BarlowTwins(backbone)
 writer = SummaryWriter("runs/barlowtwins")
 
@@ -56,7 +56,6 @@ model.to(device)
 
 # BarlowTwins uses BYOL augmentations.
 # We disable resizing and gaussian blur for cifar10.
-
 
 
 def adjust_learning_rate(epoch, optimizer, loader, step):
@@ -74,6 +73,7 @@ def adjust_learning_rate(epoch, optimizer, loader, step):
     optimizer.param_groups[0]["lr"] = lr * 0.2
     optimizer.param_groups[1]["lr"] = lr * 0.048
 
+
 def cosine_lr_scheduler(optimizer, warmup_iters, num_iters, lr_max, lr_min):
     """Cosine learning rate scheduler.
 
@@ -88,7 +88,14 @@ def cosine_lr_scheduler(optimizer, warmup_iters, num_iters, lr_max, lr_min):
     def lr_lambda(global_step: int):
         if global_step < warmup_iters:
             return float(global_step) / float(max(1.0, warmup_iters))
-        return 0.5 * (1.0 + math.cos(math.pi * (global_step - warmup_iters) / float(max(1.0, num_iters - warmup_iters))))
+        return 0.5 * (
+            1.0
+            + math.cos(
+                math.pi
+                * (global_step - warmup_iters)
+                / float(max(1.0, num_iters - warmup_iters))
+            )
+        )
 
     return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
@@ -114,10 +121,14 @@ else:
 dataset = torchvision.datasets.ImageFolder(data_path, Transform())
 
 loader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size, num_workers=8,
-        )
+    dataset,
+    batch_size=batch_size,
+    num_workers=8,
+)
 optimizer = torch.optim.Adam(model.parameters())
-scheduler = cosine_lr_scheduler(optimizer, warmup_iters=100, num_iters=1001, lr_max=1e-3, lr_min=1e-5)
+scheduler = cosine_lr_scheduler(
+    optimizer, warmup_iters=100, num_iters=1001, lr_max=1e-3, lr_min=1e-5
+)
 
 criterion = BarlowTwinsLoss()
 print("Starting Training")
@@ -129,10 +140,10 @@ for epoch in tqdm.tqdm(range(200, 1001)):
     for step, ((y1, y2), _) in tqdm.tqdm(enumerate(loader, start=epoch * len(loader))):
         y1 = y1.to(device)
         y2 = y2.to(device)
-     
+
         z0 = model(y1)
         z1 = model(y2)
-        #adjust_learning_rate(epoch, optimizer, train_data_loader, index)
+        # adjust_learning_rate(epoch, optimizer, train_data_loader, index)
         loss = criterion(z0, z1)
         total_loss += loss.detach()
         loss.backward()

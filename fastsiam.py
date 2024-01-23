@@ -9,7 +9,7 @@ from torch import nn
 from lightly.loss import NegativeCosineSimilarity
 from lightly.models.modules import SimSiamPredictionHead, SimSiamProjectionHead
 from lightly.transforms import FastSiamTransform
-
+from lightly.data import LightlyDataset 
 
 class FastSiam(nn.Module):
     def __init__(self, backbone):
@@ -34,11 +34,11 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 model.to(device)
 
 transform = FastSiamTransform(input_size=32)
-dataset = torchvision.datasets.CIFAR10(
-    "datasets/cifar10", download=True, transform=transform
-)
-# or create a dataset from a folder containing images or videos:
-# dataset = LightlyDataset("path/to/folder", transform=transform)
+# dataset = torchvision.datasets.CIFAR10(
+#     "datasets/cifar10", download=True, transform=transform
+# )
+# # or create a dataset from a folder containing images or videos:
+dataset = LightlyDataset("/scratch/mrvl005h/Image_data", transform=transform)
 
 dataloader = torch.utils.data.DataLoader(
     dataset,

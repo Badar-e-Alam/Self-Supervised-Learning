@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #
-#SBATCH --job-name=dino_classification_4
+#SBATCH --job-name=dino_classification_big
 #SBATCH --clusters=tinygpu
 #SBATCH --nodes=1
 # --gres and --time required to communicate the required GPU and time period
@@ -10,7 +10,7 @@
 #SBATCH --export=NONE
 
 # useful variable
-exp_name=dino_classification_4
+exp_name=dino_classification_big
 output_dir=/home/woody/rzku/mrvl005h/output1/$exp_name
 scratch_dir=/scratch/mrvl005h
 

@@ -19,12 +19,12 @@ class ClassifierModel(nn.Module):
         self.fc = nn.Sequential(
             nn.Linear(num_features, 1024),
             nn.LeakyReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.1957759240034611),
             nn.Linear(1024, 512),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(512, 431),
-            nn.ReLU(),
-            nn.Dropout(0.5),
+            nn.LeakyReLU(),
+            nn.Dropout(0.1957759240034611),
             nn.Linear(431, num_classes),
             nn.Sigmoid(),
         )
@@ -177,9 +177,10 @@ def test_model(model, feature_extractor,test_loader, loss_fn, epoch, writer):
 
 if __name__=="__main__":
     test_loader=get_data()
+    print("code running on: ",DEVICE)
     model=ClassifierModel(num_features=2048,num_classes=3).to(DEVICE)
     # model=ClassifierModel_base(num_classes=3).to(DEVICE)
-    model.load_state_dict(torch.load("classifier_head/dino_classifier/dino_v3/model_100.pt",map_location=DEVICE))
+    model.load_state_dict(torch.load("/home/woody/rzku/mrvl005h/output1/dino_classification_big/Self-Supervised-Learning/classification_results/model/model_150.pt",map_location=DEVICE))
     dino_backbone = torch.load("train_weights/dino_backbone.pt",map_location=DEVICE)
     resnet=torchvision.models.resnet50()
     resnet=nn.Sequential(*list(resnet.children())[:-1])

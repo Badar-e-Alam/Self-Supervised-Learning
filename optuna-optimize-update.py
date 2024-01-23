@@ -42,8 +42,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 BATCHSIZE = 256
 CLASSES = 3
 EPOCH = 10
-N_TRAIN_EXAMPLES = BATCHSIZE * 50
-N_VALID_EXAMPLES = BATCHSIZE * 10
+
 
 
 weight_path = "train_weights/dino_backbone.pt"
@@ -229,7 +228,9 @@ def objective(trial):
     print("trial number: ", trial.number)
     writer = SummaryWriter(log_dir=f"optuna-exp/trial_{trial.number}")
     # classification_criterion = nn.BCELoss()
-    classification_criterion=nn.BCELoss()
+    classification_criterion = nn.BCELoss()
+    
+
     model = define_model(trial).to(DEVICE)
     # Generate the optimizers.
     optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
@@ -247,7 +248,7 @@ def objective(trial):
         T_max = trial.suggest_int("T_max", 50, 1000)
         eta_min = trial.suggest_float("eta_min", 0, 0.1)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=T_max, eta_min=eta_min)
-        accuracy = []
+    accuracy = []
         # Get the FashionMNIST dataset.
     train_loader, valid_loader,test_loader = get_data()
     for epoch in range(EPOCH):
@@ -268,8 +269,8 @@ def objective(trial):
 
 
 if __name__ == "__main__":
-    study_name = "data_lekage"
-    storage_name = "sqlite:///classifier_2.db"
+    study_name = "windings-classifier"
+    storage_name = "sqlite:///classifier.db"
     study = optuna.create_study(
         study_name=study_name,
         storage=storage_name,
@@ -278,7 +279,7 @@ if __name__ == "__main__":
     )
     early_stopping_callback = partial(early_stopping, early_stopping=20)
 
-    study.optimize(objective, callbacks=[partial(early_stopping_callback)])
+    study.optimize(objective, n_trials=100)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
