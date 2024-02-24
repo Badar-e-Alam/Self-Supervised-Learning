@@ -16,7 +16,7 @@ The second step involves downstreaming the Barlow feature extractor for multi-la
 - [x] Optimizing the hyperparameters with Optuna
 - [x] Training the multi-label classifier on Barlow Twins
 - [x] Impletementated the state of the art Dino Paper Meta
-- [ ] Address the data leakage problem (in progress)
+- [x] Address the data leakage problem (in progress)
 
 ## Key Concepts
 
